@@ -6,7 +6,9 @@ Paper: (https://arxiv.org/abs/2302.10160).
 ## Demonstration
 
 See `Demo.ipynb` for a synthetic data experiment.
-
+<p align="center">
+    <img src="demo.pdf" alt="Demonstration" width="500" height="400" />
+</p>
 
 ## Citation
 ```

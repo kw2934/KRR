@@ -13,7 +13,7 @@ See `Demo.ipynb` for a synthetic data experiment.
 - Samples sizes: 1000 (source) and 500 (target).
 - Kernel: First-order Sobolev kernel $K(z, w) = \min \lbrace z , w \rbrace $.
 
-We compare model selection based on different validation datasets.
+We compare model selection methods that are based on different validation datasets.
 - New method (red): target data with pseudo-labels;
 - Oracle method (cyan): target data with noiseless responses;
 - Naive method (blue): half of source data.

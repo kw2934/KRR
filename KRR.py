@@ -42,7 +42,7 @@ class KRR_covariate_shift:
         self.y_0 = f_star(self.X_0, self.fcn) # noiseless responses
     
     
-    def estimate(self, rho = 0.2, beta = 2): # KRR under covariate shift
+    def fit(self, rho = 0.5, beta = 2): # KRR under covariate shift
         assert beta > 1
         assert 0 < rho and rho < 1
         
@@ -53,8 +53,8 @@ class KRR_covariate_shift:
         self.X_2, self.y_2 = self.X[self.n_1:self.n], self.y[self.n_1:self.n]        
         
         # penalty parameters: one for imputation, a geometric sequence for training
-        lbd_tilde = 0.1 / self.n_2 # for the imputation model
-        lbd_min, lbd_max = 0.1 / self.n_1, 1 # min and max for training
+        lbd_tilde = 0.1 / self.n # for the imputation model
+        lbd_min, lbd_max = 0.1 / self.n, 1 # min and max for training
         m = np.log(lbd_max / lbd_min) / np.log(beta)
         m = max( int(np.ceil(m)) , 2 ) + 1
         self.Lambda = lbd_min * ( beta ** np.array( range(m) ) ) # for training
@@ -99,25 +99,39 @@ class KRR_covariate_shift:
         self.lbd_real = self.Lambda[self.j_real]
         self.alpha_real = self.Alpha[self.j_real]
 
-        
-    def evaluate(self, N_test, seed): # evaluate MSE on the target distribution using newly generated samples
+
+    ############################################
+    # evaluation of candidates
+    def predict_candidates(self, X_new, list_idx_candidates): # make predictions using candidates
+        self.y_new_true = f_star(X_new, self.fcn)
+        K = Kernel(X_new, self.X_1)
+        m = len(list_idx_candidates)
+        self.y_new_candidates = []
+        for j in list_idx_candidates:
+            self.y_new_candidates.append( K @ self.Alpha[j] )
+
+
+    def evaluate_candidates(self, distribution, list_idx_candidates, N_test, seed): # evaluate excess risk on the source or the target distribution
         np.random.seed(seed)
         tmp = int(N_test * self.B / (self.B + 1))
-        self.X_test_0 = np.concatenate((np.random.rand(N_test - tmp) / 2, 1/2 + np.random.rand(tmp) / 2))
-        K_test = Kernel(self.X_test_0, self.X_1)
-        self.y_true_test_0 = f_star(self.X_test_0, self.fcn)
-        
-        self.y_naive = K_test @ self.alpha_naive
-        self.err_naive = np.mean( (self.y_true_test_0 - self.y_naive) ** 2 )
-        
-        self.y_pseudo = K_test @ self.alpha_pseudo
-        self.err_pseudo = np.mean( (self.y_true_test_0 - self.y_pseudo) ** 2 )
+        if distribution == 'target':
+            self.X_test_0 = np.concatenate((np.random.rand(N_test - tmp) / 2, 1/2 + np.random.rand(tmp) / 2))
+        elif distribution == 'source':
+            self.X_test_0 = np.concatenate((np.random.rand(tmp) / 2, 1/2 + np.random.rand(N_test - tmp) / 2))
 
-        self.y_real = K_test @ self.alpha_real
-        self.err_real = np.mean( (self.y_true_test_0 - self.y_real) ** 2 )        
+        self.predict_candidates(self.X_test_0, list_idx_candidates)
+        self.err_candidates = []
+        self.err_candidates_ste = []
+        sqrt_N = np.sqrt(N_test)
+        for i in range(len(list_idx_candidates)):
+            tmp = (self.y_new_true - self.y_new_candidates[i]) ** 2
+            self.err_candidates.append( np.mean(tmp) )
+            self.err_candidates_ste.append( np.std(tmp) / sqrt_N )
 
-    
-    def predict(self, X_new): # make predictions given covariates
+
+    ############################################
+    # evaluation of selected models
+    def predict_final(self, X_new): # make predictions using selected models
         self.y_new_true = f_star(X_new, self.fcn)
         self.y_new_tilde = Kernel(X_new, self.X_2) @ self.alpha_tilde
 
@@ -126,9 +140,48 @@ class KRR_covariate_shift:
         self.y_new_pseudo = K @ self.alpha_pseudo
         self.y_new_real = K @ self.alpha_real
 
-        m = len(self.Lambda)
-        self.y_new_candidates = np.zeros((m, len(X_new)))
-        for j in range(m):
-            self.y_new_candidates[j] = K @ self.Alpha[j]
+
+    def evaluate_final(self, N_test, seed): # evaluate excess risk on the target distribution using selected models and newly generated samples
+        np.random.seed(seed)
+        tmp = int(N_test * self.B / (self.B + 1))
+        self.X_test_0 = np.concatenate((np.random.rand(N_test - tmp) / 2, 1/2 + np.random.rand(tmp) / 2))
+        self.predict_final(self.X_test_0)
+
+        sqrt_N = np.sqrt(N_test)
+
+        tmp = (self.y_new_true - self.y_new_naive) ** 2
+        self.err_naive = np.mean(tmp)
+        self.err_naive_ste = np.std(tmp) / sqrt_N
+
+        tmp = (self.y_new_true - self.y_new_pseudo) ** 2
+        self.err_pseudo = np.mean(tmp)
+        self.err_pseudo_ste = np.std(tmp) / sqrt_N
+
+        tmp = (self.y_new_true - self.y_new_real) ** 2
+        self.err_real = np.mean(tmp)
+        self.err_real_ste = np.std(tmp) / sqrt_N
 
 
+# run experiments in Section 5.2
+
+def run_experiment(n_list, seed_list):
+    # idx: 1 to 100
+    # n_list: list of sample sizes, e.g., [2000, 4000, 8000, 16000, 32000]
+    # seed_list: list of random seeds
+
+    fcn = 'C' # true function
+    sigma = 1 # standard deviation of noise
+    beta = 2 # ratio parameter in the grid of lambdas
+    N_test = 10000
+
+    res = np.zeros((len(n_list), len(seed_list), 3))
+    for (j, n) in enumerate(n_list):
+        B = n ** (1/3)
+        n_0 = n
+        for (k, seed) in enumerate(seed_list):
+            test = KRR_covariate_shift(n, n_0, B, sigma, fcn, seed)
+            test.fit(beta = beta)
+            test.evaluate_final(N_test = N_test, seed = seed)
+            res[j, k] = [test.err_naive, test.err_pseudo, test.err_real]
+
+    return res

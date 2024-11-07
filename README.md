@@ -10,7 +10,7 @@ See `demo.ipynb` for the simulation experiment in Section 1.
 - Response model: $y|x \sim N( f^\*(x) , \sigma^2 )$ with $f^\* (x) = \cos(2\pi x) - 1$ and $\sigma = 1$.
 - Source covariate distribution: $\frac{B}{B + 1} \mathcal{U} [0, 1/2] + \frac{1}{B + 1} \mathcal{U} [1/2, 1]$ with $B = 5$.
 - Target covariate distribution: $\frac{1}{B + 1} \mathcal{U} [0, 1/2] + \frac{B}{B + 1} \mathcal{U} [1/2, 1]$ with $B = 5$.
-- Samples sizes: 500 (source) and 500 (target).
+- Samples sizes: 500 (source, labeled) and 500 (target, unlabeled).
 - Kernel: first-order Sobolev kernel $K(z, w) = \min \lbrace z , w \rbrace $.
 
 We run kernel ridge regression on half of the source data with different penalty parameters to get a collection of candidate models. Then, we compare model selection methods based on different validation datasets.

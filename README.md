@@ -13,10 +13,10 @@ See `demo.ipynb` for the simulation experiment in Section 1.
 - Samples sizes: 500 (source) and 500 (target).
 - Kernel: first-order Sobolev kernel $K(z, w) = \min \lbrace z , w \rbrace $.
 
-We compare model selection methods that are based on different validation datasets.
-- New method (red): target data with pseudo-labels;
+We run kernel ridge regression on half of the source data with different penalty parameters to get a collection of candidate models. Then, we compare model selection methods based on different validation datasets.
+- Proposed method (red): target data with pseudo-labels;
 - Oracle method (cyan): target data with noiseless responses;
-- Naive method (blue): half of source data.
+- Naive method (blue): the held-out half of source data.
   
 We also visualize the imputation model for pseudo-label generation (pink).
 

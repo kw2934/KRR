@@ -5,7 +5,7 @@ Paper: (https://arxiv.org/abs/2302.10160).
 
 ## Demonstration
 
-See `Demo.ipynb` for the simulation experiment in Section 1. 
+See `demo.ipynb` for the simulation experiment in Section 1. 
 - Feature space: $[0, 1]$.
 - Response model: $y|x \sim N( f^\*(x) , \sigma^2 )$ with $f^\* (x) = \cos(2\pi x) - 1$ and $\sigma = 1$.
 - Source covariate distribution: $\frac{B}{B + 1} \mathcal{U} [0, 1/2] + \frac{1}{B + 1} \mathcal{U} [1/2, 1]$ with $B = 5$.
@@ -21,7 +21,7 @@ We compare model selection methods that are based on different validation datase
 We also visualize the imputation model for pseudo-label generation (pink).
 
 <p align="center">
-    <img src="demo.pdf" alt="Demonstration" width="500" height="400" />
+    <img src="demo.png" alt="Demonstration" width="500" height="400" />
 </p>
 
 
